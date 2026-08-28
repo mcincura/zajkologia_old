@@ -76,8 +76,7 @@ const createPlacementCopy = (offer) => {
     home: {
       ...baseCopy,
       eyebrow: '',
-      headline:
-        'Buď medzi prvými, ktorí sa dozvedia o nových článkoch a tipoch, a získaj príručku zadarmo.',
+      headline: 'Získavaj novinky zo sveta kralikov medzi prvými',
       subheadline:
         'Prihlás sa na odber noviniek od Zajkológie a získaj prístup k novým článkom, praktickým tipom a užitočným informáciám o starostlivosti o králiky. Navyše ti pošleme aj PDF príručku zdarmo.',
       benefit:
@@ -125,6 +124,7 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   const emailId = useId();
   const headingId = useId();
   const consentId = useId();
+  const errorId = useId();
   const consentDetailsTitleId = useId();
   const consentDetailsDescriptionId = useId();
   const consentDetailsTriggerRef = useRef(null);
@@ -144,6 +144,7 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   const [awaitingEmailClick, setAwaitingEmailClick] = useState(false);
   const [alreadySubscribed, setAlreadySubscribed] = useState(false);
   const [error, setError] = useState('');
+  const [errorTarget, setErrorTarget] = useState('');
   const [status, setStatus] = useState('idle');
   const [copied, setCopied] = useState(false);
   const [isSuppressed, setIsSuppressed] = useState(() => (
@@ -240,16 +241,19 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
 
     if (!isValidEmail(trimmedEmail)) {
       setError(copy.invalidEmail);
+      setErrorTarget('email');
       return;
     }
 
     if (!consentAccepted) {
       setError(copy.missingConsent);
+      setErrorTarget('consent');
       return;
     }
 
     setStatus('submitting');
     setError('');
+    setErrorTarget('');
     setAlreadySubscribed(false);
     setAwaitingEmailClick(false);
 
@@ -323,14 +327,19 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
     } catch (err) {
       if (err?.data?.error === 'consent_required') {
         setError(copy.missingConsent);
+        setErrorTarget('consent');
       } else if (err?.data?.error === 'invalid_email') {
         setError(copy.invalidEmail);
+        setErrorTarget('email');
       } else if (err?.data?.error === 'welcome_email_failed') {
         setError(copy.emailFailed);
+        setErrorTarget('form');
       } else if (err?.data?.error === 'newsletter_rate_limited') {
         setError(copy.rateLimited);
+        setErrorTarget('form');
       } else {
         setError('Prihlásenie sa nepodarilo. Skúste to prosím znova.');
+        setErrorTarget('form');
       }
       setStatus('idle');
     }
@@ -379,6 +388,12 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
         aria-labelledby={copy.headline ? headingId : undefined}
         aria-label={copy.headline ? undefined : copy.eyebrow}
       >
+        {placement === 'home' && copy.headline && (
+          <h2 id={headingId} className="email-offer__headline email-offer__headline--wide">
+            {copy.headline}
+          </h2>
+        )}
+
         <div className="email-offer__copy">
           {copy.eyebrow && (
             <span className="email-offer__eyebrow">
@@ -386,7 +401,7 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
               {copy.eyebrow}
             </span>
           )}
-          {copy.headline && <h2 id={headingId}>{copy.headline}</h2>}
+          {placement !== 'home' && copy.headline && <h2 id={headingId}>{copy.headline}</h2>}
           <p>{copy.subheadline}</p>
           {copy.benefit && (
             <p className="email-offer__benefit">
@@ -431,9 +446,18 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
                 id={emailId}
                 type="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  const nextEmail = event.target.value;
+                  setEmail(nextEmail);
+                  if (errorTarget === 'email' && isValidEmail(nextEmail)) {
+                    setError('');
+                    setErrorTarget('');
+                  }
+                }}
                 placeholder={copy.emailPlaceholder}
                 autoComplete="email"
+                aria-invalid={errorTarget === 'email' ? 'true' : undefined}
+                aria-describedby={errorTarget === 'email' ? errorId : undefined}
                 required
               />
             </label>
@@ -443,7 +467,15 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
                 id={consentId}
                 type="checkbox"
                 checked={consentAccepted}
-                onChange={(event) => setConsentAccepted(event.target.checked)}
+                onChange={(event) => {
+                  setConsentAccepted(event.target.checked);
+                  if (errorTarget === 'consent') {
+                    setError('');
+                    setErrorTarget('');
+                  }
+                }}
+                aria-invalid={errorTarget === 'consent' ? 'true' : undefined}
+                aria-describedby={errorTarget === 'consent' ? errorId : undefined}
                 required
               />
               <div className="email-offer__consent-text">
@@ -463,7 +495,7 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
             </div>
 
             {error && (
-              <div className="email-offer__error" role="alert">
+              <div id={errorId} className="email-offer__error" role="alert">
                 {error}
               </div>
             )}
@@ -477,14 +509,21 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
 
         {placement === 'home' && (
           <figure className="email-offer__guide-visual">
-            <img
-              src="/newsletter/care-guide-mockup.png"
-              width="6000"
-              height="3375"
-              loading="lazy"
-              decoding="async"
-              alt="Náhľad PDF príručky Základy starostlivosti o králika"
-            />
+            <picture>
+              <source
+                type="image/webp"
+                srcSet="/newsletter/care-guide-mockup-960.webp 960w, /newsletter/care-guide-mockup-1600.webp 1600w"
+                sizes="(max-width: 920px) calc(100vw - 3rem), 570px"
+              />
+              <img
+                src="/newsletter/care-guide-mockup.png"
+                width="6000"
+                height="3375"
+                loading="lazy"
+                decoding="async"
+                alt="Náhľad PDF príručky Základy starostlivosti o králika"
+              />
+            </picture>
             <figcaption>
               <FileText size={17} aria-hidden="true" />
               PDF príručka zdarma

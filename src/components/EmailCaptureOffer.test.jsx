@@ -86,7 +86,7 @@ describe('EmailCaptureOffer', () => {
     renderOffer('home');
 
     expect(await screen.findByRole('heading', {
-      name: /Buď medzi prvými, ktorí sa dozvedia o nových článkoch a tipoch/i,
+      name: /Získavaj novinky zo sveta kralikov medzi prvými/i,
     })).toBeInTheDocument();
     expect(screen.getByText(/Ako bonus za prihlásenie získaš zadarmo PDF príručku/i))
       .toBeInTheDocument();
@@ -96,12 +96,47 @@ describe('EmailCaptureOffer', () => {
     expect(guideMockup).toHaveAttribute('src', '/newsletter/care-guide-mockup.png');
     expect(guideMockup).toHaveAttribute('width', '6000');
     expect(guideMockup).toHaveAttribute('height', '3375');
+    expect(guideMockup.closest('picture')?.querySelector('source')).toHaveAttribute(
+      'srcset',
+      '/newsletter/care-guide-mockup-960.webp 960w, /newsletter/care-guide-mockup-1600.webp 1600w',
+    );
 
     const email = screen.getByLabelText('Zadaj svoj e-mail');
     expect(email).toHaveAttribute('type', 'email');
     expect(email).toHaveAttribute('autocomplete', 'email');
     expect(email).toBeRequired();
     expect(screen.getByRole('button', { name: /chcem dostávať novinky/i })).toBeEnabled();
+  });
+
+  it('links client validation messages to the field that needs attention', async () => {
+    const user = userEvent.setup();
+    vi.mocked(loadWelcomeDiscountOffer).mockResolvedValue(null);
+    renderOffer('home');
+
+    const submit = await screen.findByRole('button', { name: /chcem dostávať novinky/i });
+    const email = screen.getByLabelText('Zadaj svoj e-mail');
+    const consent = screen.getByRole('checkbox');
+
+    await user.click(submit);
+    const emailError = screen.getByRole('alert');
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    expect(email).toHaveAttribute('aria-describedby', emailError.id);
+
+    await user.type(email, 'stale');
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent(/platnú e-mailovú adresu/i);
+
+    await user.clear(email);
+    await user.type(email, 'citatel@example.com');
+    expect(email).not.toHaveAttribute('aria-invalid');
+    await user.click(submit);
+    const consentError = screen.getByRole('alert');
+    expect(consent).toHaveAttribute('aria-invalid', 'true');
+    expect(consent).toHaveAttribute('aria-describedby', consentError.id);
+
+    await user.click(consent);
+    expect(consent).not.toHaveAttribute('aria-invalid');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('shows readable consent details and returns focus to the opener when closed', async () => {

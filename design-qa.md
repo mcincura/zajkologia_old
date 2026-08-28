@@ -105,3 +105,72 @@ final result: passed
 ## Final result
 
 final result: passed
+
+---
+
+
+# Newsletter Homepage Design QA
+
+**Comparison target**
+
+- Source visual truth (layout direction only): `/var/folders/dr/gd89g9_n1971xnx583b8qng80000gn/T/TemporaryItems/NSIRD_screencaptureui_OSr6LP/Screenshot 2026-08-29 at 00.31.08.png`
+- Source asset truth (must be used in the page): `/Users/martin/Downloads/mockup newsletter.png`
+- Rendered implementation: `http://127.0.0.1:4173/`
+- Implementation capture: `/private/tmp/zajkologia-design-qa/home-full-final.jpg`
+- Consent-modal capture: `/private/tmp/zajkologia-design-qa/consent-modal.jpg`
+- Side-by-side evidence: `/private/tmp/zajkologia-design-qa/comparison-final.jpg`
+
+**Viewport and normalization**
+
+- Chrome CSS viewport: `1470 × 780` at 1× density.
+- Browser capture pixels: `1455 × 6563`; the newsletter region was normalized from crop `(190, 590)–(1270, 1300)`.
+- Layout-reference pixels: `1960 × 1312`.
+- Actual mockup pixels: `6000 × 3375`.
+- Both comparison regions were proportionally fit into equal `960 × 700` tiles without stretching. Browser chrome was excluded; surrounding page background remains only as context.
+
+**State**
+
+- Homepage newsletter form in its idle state with the guide image loaded.
+- Consent dialog checked separately in its open state and after closing.
+- Primary interactions checked in Chrome: email-field focus, consent checkbox, consent-dialog open/close, readable dialog content, and focus restoration to `Viac informácií`.
+
+**Findings**
+
+- No actionable P0, P1, or P2 differences remain after the release-quality pass.
+- Fonts and typography: the large burgundy Georgia headline reproduces the reference hierarchy, spans the full card width as requested, and balances into two desktop lines. Supporting copy retains the site's existing Inter typography and readable optical weight.
+- Spacing and layout rhythm: the heading is a dedicated grid row above both columns. The lower copy/form and image columns remain aligned, the card padding is even, and the existing mobile breakpoints preserve the order heading → copy → image → form.
+- Colors and visual tokens: the cream card, burgundy display type, understated divider, rounded controls, and dark image frame stay within the existing Zajkológia palette while matching the reference's warm direction.
+- Image quality and asset fidelity: the original `/newsletter/care-guide-mockup.png` is byte-identical to the supplied `6000 × 3375` mockup (SHA-256 `af922de746ad9c1ba4827c5c29d1b6f12c262cebe1bdca32f3f509686a7a1a97`). Chrome renders a responsive WebP derivative made directly from that source (`66 KB` at 960px or `151 KB` at 1600px) while the exact PNG remains the fallback. All variants retain the native 16:9 composition with no crop or stretch. The different guide composite visible in the approximate reference was intentionally not used.
+- Copy and content: the heading is exactly `Získavaj novinky zo sveta kralikov medzi prvými`; the previously approved body, benefit, field label, consent text, and CTA remain unchanged.
+- Consent modal: the modal is visibly populated, centered, scroll-safe, and restores focus to the opener after closing.
+- Validation accessibility: email and consent errors now mark the relevant control with `aria-invalid` and link it to the live error message with `aria-describedby`; the state clears when the user corrects that field.
+
+**Focused region comparison**
+
+- The side-by-side evidence keeps the headline, body copy, benefit box, form controls, CTA, and mockup readable at once, so a second crop was not needed. The consent dialog has its own focused capture because it is a separate interaction state.
+
+**Comparison history**
+
+- Pass 1 visual comparison: no P0/P1/P2 visual mismatch was found. The implementation intentionally differs from the approximate reference in two user-directed ways: the headline spans the full card, and the real supplied mockup replaces the example composite.
+- Pass 1 release-quality review found two P2 issues outside the visible composition:
+  - The 9.4 MB source PNG was the only browser source. Fix: retained it as the exact fallback and added 960px/1600px responsive WebP derivatives. Post-fix Chrome evidence confirmed `care-guide-mockup-1600.webp` as `currentSrc`; the final side-by-side capture shows no visible asset drift.
+  - Form alerts were not programmatically linked to the invalid email or consent control. Fix: added field-targeted `aria-invalid` and `aria-describedby`, clearing them after correction. Post-fix component coverage verifies both paths.
+- Pass 2: `/private/tmp/zajkologia-design-qa/comparison-final.jpg` shows the revised implementation at the same crop, viewport, and idle state. No actionable P0/P1/P2 differences remain.
+
+**Implementation checklist**
+
+- [x] Exact requested headline
+- [x] Full-width headline row above the image
+- [x] Actual supplied mockup retained without distortion
+- [x] Responsive 960px/1600px delivery derived from the exact mockup
+- [x] Desktop composition visually compared with the supplied reference
+- [x] Responsive grid order reviewed at both existing breakpoints
+- [x] Consent dialog visually and interactively verified
+- [x] Field-specific validation semantics verified
+- [x] Focused tests, lint, and production build completed
+
+**Follow-up polish**
+
+- None required for release.
+
+final result: passed
