@@ -275,27 +275,30 @@
   background: rgba(73, 99, 77, 0.16);
 }
 
-.email-offer__modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background: rgba(38, 12, 26, 0.42);
-}
-
 .email-offer__modal {
-  display: grid;
   gap: 1rem;
-  width: min(100%, 520px);
+  box-sizing: border-box;
+  width: min(calc(100% - 2rem), 520px);
+  max-height: min(88dvh, 680px);
+  margin: auto;
   padding: 1.25rem;
   border: 1px solid rgba(122, 63, 0, 0.16);
   border-radius: var(--radius);
   background: #fffaf4;
   box-shadow: 0 22px 60px rgba(38, 12, 26, 0.28);
-  color: var(--email-offer-ink);
+  color: #260c1a;
+  text-align: left;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.email-offer__modal[open] {
+  display: grid;
+}
+
+.email-offer__modal::backdrop {
+  background: rgba(38, 12, 26, 0.56);
+  backdrop-filter: blur(3px);
 }
 
 .email-offer__modal-header {
@@ -307,14 +310,21 @@
 
 .email-offer__modal h3 {
   margin: 0;
-  color: var(--email-offer-ink);
+  color: #260c1a;
   font-size: 1.1rem;
   line-height: 1.2;
 }
 
 .email-offer__modal p {
+  margin: 0;
+  color: rgba(38, 12, 26, 0.76);
   font-size: 0.95rem;
   line-height: 1.55;
+}
+
+.email-offer__modal-copy {
+  display: grid;
+  gap: 0.72rem;
 }
 
 .email-offer__modal-close {
@@ -327,7 +337,7 @@
   border: 1px solid rgba(73, 99, 77, 0.14);
   border-radius: 999px;
   background: rgba(73, 99, 77, 0.08);
-  color: var(--email-offer-sage);
+  color: #49634d;
 }
 
 .email-offer__modal-action {
@@ -335,7 +345,7 @@
   min-height: 40px;
   padding: 0.62rem 1rem;
   border-radius: 999px;
-  background: var(--email-offer-ink);
+  background: #260c1a;
   color: #fff8ed;
   font-weight: 850;
 }
@@ -351,10 +361,10 @@
   grid-template-areas:
     "copy visual"
     "form visual";
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
-  gap: 1rem 2.25rem;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
+  gap: 1rem clamp(1.35rem, 2.8vw, 2.5rem);
   align-items: center;
-  padding: 2rem;
+  padding: clamp(1.35rem, 2.8vw, 2.2rem);
   border: 2px solid rgba(255, 248, 245, 0.42);
   border-radius: 26px;
   background:
@@ -419,25 +429,35 @@
 .email-offer__guide-visual {
   position: relative;
   grid-area: visual;
-  justify-self: end;
-  width: min(100%, 292px);
+  justify-self: stretch;
+  width: 100%;
   margin: 0;
+  padding: clamp(0.5rem, 1vw, 0.85rem);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(111, 46, 70, 0.48), transparent 58%),
+    linear-gradient(145deg, #180710, #2d0b19);
+  box-shadow:
+    0 20px 44px rgba(38, 12, 26, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
 }
 
 .email-offer__guide-visual img {
+  display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 3 / 4;
-  border: 1px solid rgba(38, 12, 26, 0.12);
-  border-radius: 20px;
-  object-fit: cover;
-  box-shadow: 0 18px 32px rgba(38, 12, 26, 0.2);
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.24));
 }
 
 .email-offer__guide-visual figcaption {
   position: absolute;
-  right: 0.8rem;
-  bottom: 0.8rem;
+  right: 1rem;
+  bottom: 1rem;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -488,6 +508,16 @@
   margin: 2.5rem 0 1rem;
 }
 
+@media (max-width: 920px) {
+  .email-offer--home {
+    grid-template-areas:
+      "copy"
+      "visual"
+      "form";
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 760px) {
   .email-offer {
     grid-template-columns: 1fr;
@@ -513,8 +543,8 @@
   .email-offer--home {
     grid-template-areas:
       "copy"
-      "form"
-      "visual";
+      "visual"
+      "form";
     gap: 1.15rem;
     padding: 1.15rem;
     border-radius: 22px;
@@ -529,8 +559,13 @@
   }
 
   .email-offer__guide-visual {
-    justify-self: center;
-    width: min(78vw, 270px);
+    width: 100%;
+    border-radius: 18px;
+  }
+
+  .email-offer__guide-visual figcaption {
+    right: 0.72rem;
+    bottom: 0.72rem;
   }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { CheckCircle2, Copy, FileText, Mail, Tag, X } from 'lucide-react';
 import { loadWelcomeDiscountOffer, signupForWelcomeDiscount } from '../api/client';
 import { useCart } from '../cart/useCart';
@@ -46,6 +46,8 @@ const createPlacementCopy = (offer) => {
     benefit: '',
     emailLabel: 'E-mailová adresa',
     emailPlaceholder: 'tvoj@email.sk',
+    consentLabel: 'Súhlasím so zasielaním newslettera a marketingových e-mailov.',
+    consentDetailsLabel: 'Zobraziť viac detailov',
     cta: `Získať ${discountAccusative}`,
     successTitle: 'Ďakujeme',
     success:
@@ -74,12 +76,17 @@ const createPlacementCopy = (offer) => {
     home: {
       ...baseCopy,
       eyebrow: '',
-      headline: 'Nezmeškaj nové články a tipy o králikoch',
+      headline:
+        'Buď medzi prvými, ktorí sa dozvedia o nových článkoch a tipoch, a získaj príručku zadarmo.',
       subheadline:
-        'Prihlás sa na odber Zajkológia newslettera a nové články, praktické tipy aj dôležité informácie o starostlivosti o králiky ti pošleme priamo do e-mailu.',
+        'Prihlás sa na odber noviniek od Zajkológie a získaj prístup k novým článkom, praktickým tipom a užitočným informáciám o starostlivosti o králiky. Navyše ti pošleme aj PDF príručku zdarmo.',
       benefit:
-        'Ako poďakovanie od nás získaš ZDARMA PDF príručku so základmi starostlivosti o králika.',
-      cta: 'Chcem príručku zdarma',
+        'Ako bonus za prihlásenie získaš zadarmo PDF príručku so základmi starostlivosti o králika.',
+      emailLabel: 'Zadaj svoj e-mail',
+      consentLabel:
+        'Súhlasím so zasielaním newslettera, nových článkov a ďalších e-mailov od Zajkológie.',
+      consentDetailsLabel: 'Viac informácií',
+      cta: 'Chcem dostávať novinky',
       successTitle: 'Ďakujeme!',
       emailSent: 'Skontroluj si e-mail. Príručku sme ti poslali v prílohe.',
       missingConsent:
@@ -119,6 +126,10 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   const headingId = useId();
   const consentId = useId();
   const consentDetailsTitleId = useId();
+  const consentDetailsDescriptionId = useId();
+  const consentDetailsTriggerRef = useRef(null);
+  const consentDialogRef = useRef(null);
+  const consentDialogCloseRef = useRef(null);
   const [offer, setOffer] = useState(null);
   const [offerAvailability, setOfferAvailability] = useState('loading');
   const placementCopy = createPlacementCopy(offer);
@@ -135,7 +146,6 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   const [error, setError] = useState('');
   const [status, setStatus] = useState('idle');
   const [copied, setCopied] = useState(false);
-  const [isConsentDetailsOpen, setIsConsentDetailsOpen] = useState(false);
   const [isSuppressed, setIsSuppressed] = useState(() => (
     placement === 'home' ? isNewsletterGuideSuppressed() : isEmailCaptureSuppressed()
   ));
@@ -189,20 +199,40 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
     };
   }, [placement]);
 
-  useEffect(() => {
-    if (!isConsentDetailsOpen) return undefined;
+  const restoreConsentDetailsFocus = () => {
+    consentDetailsTriggerRef.current?.focus();
+  };
 
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setIsConsentDetailsOpen(false);
-      }
-    };
+  const openConsentDetails = () => {
+    const dialog = consentDialogRef.current;
+    if (!dialog || dialog.open) return;
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isConsentDetailsOpen]);
+    if (typeof dialog.showModal === 'function') {
+      dialog.showModal();
+    } else {
+      dialog.setAttribute('open', '');
+    }
+
+    const focusCloseButton = () => consentDialogCloseRef.current?.focus();
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(focusCloseButton);
+    } else {
+      focusCloseButton();
+    }
+  };
+
+  const closeConsentDetails = () => {
+    const dialog = consentDialogRef.current;
+    if (!dialog) return;
+
+    if (dialog.open && typeof dialog.close === 'function') {
+      dialog.close();
+      return;
+    }
+
+    dialog.removeAttribute('open');
+    restoreConsentDetailsFocus();
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -418,16 +448,17 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
               />
               <div className="email-offer__consent-text">
                 <label htmlFor={consentId}>
-                  Súhlasím so zasielaním newslettera a marketingových e-mailov,
+                  {copy.consentLabel}
                 </label>{' '}
                 <button
+                  ref={consentDetailsTriggerRef}
                   type="button"
                   className="email-offer__details-button"
-                  onClick={() => setIsConsentDetailsOpen(true)}
+                  onClick={openConsentDetails}
                   aria-haspopup="dialog"
                 >
-                  viac detailov
-                </button>.
+                  {copy.consentDetailsLabel}
+                </button>
               </div>
             </div>
 
@@ -447,10 +478,12 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
         {placement === 'home' && (
           <figure className="email-offer__guide-visual">
             <img
-              src="/product-gallery/starter-guide-main-thumbnail.webp"
-              width="1200"
-              height="1600"
-              alt="Náhľad PDF príručky Králik ako domáce zviera"
+              src="/newsletter/care-guide-mockup.png"
+              width="6000"
+              height="3375"
+              loading="lazy"
+              decoding="async"
+              alt="Náhľad PDF príručky Základy starostlivosti o králika"
             />
             <figcaption>
               <FileText size={17} aria-hidden="true" />
@@ -460,44 +493,47 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
         )}
       </section>
 
-      {isConsentDetailsOpen && (
-        <div
-          className="email-offer__modal-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setIsConsentDetailsOpen(false);
-            }
-          }}
-        >
-          <div
-            className="email-offer__modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={consentDetailsTitleId}
+      <dialog
+        ref={consentDialogRef}
+        className="email-offer__modal"
+        aria-labelledby={consentDetailsTitleId}
+        aria-describedby={consentDetailsDescriptionId}
+        onClose={restoreConsentDetailsFocus}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          const clickedInside = event.clientX >= bounds.left && event.clientX <= bounds.right
+            && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+          if (!clickedInside) closeConsentDetails();
+        }}
+      >
+        <div className="email-offer__modal-header">
+          <h3 id={consentDetailsTitleId}>Marketingový súhlas</h3>
+          <button
+            ref={consentDialogCloseRef}
+            type="button"
+            className="email-offer__modal-close"
+            onClick={closeConsentDetails}
+            aria-label="Zavrieť podrobnosti"
           >
-            <div className="email-offer__modal-header">
-              <h3 id={consentDetailsTitleId}>Marketingový súhlas</h3>
-              <button
-                type="button"
-                className="email-offer__modal-close"
-                onClick={() => setIsConsentDetailsOpen(false)}
-                aria-label="Zavrieť podrobnosti"
-                autoFocus
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
-            </div>
-            <p>{MARKETING_CONSENT_TEXT}</p>
-            <button
-              type="button"
-              className="email-offer__modal-action"
-              onClick={() => setIsConsentDetailsOpen(false)}
-            >
-              Rozumiem
-            </button>
-          </div>
+            <X size={18} aria-hidden="true" />
+          </button>
         </div>
-      )}
+        <div id={consentDetailsDescriptionId} className="email-offer__modal-copy">
+          <p>{MARKETING_CONSENT_TEXT}</p>
+          <p>
+            E-mail použijeme na zaslanie príručky a následne na newsletter Zajkológie.
+            Z odberu sa môžeš kedykoľvek odhlásiť odkazom v pätičke každého e-mailu.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="email-offer__modal-action"
+          onClick={closeConsentDetails}
+        >
+          Rozumiem
+        </button>
+      </dialog>
     </>
   );
 };

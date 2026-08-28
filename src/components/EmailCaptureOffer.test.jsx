@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadWelcomeDiscountOffer, signupForWelcomeDiscount } from '../api/client';
@@ -86,18 +86,42 @@ describe('EmailCaptureOffer', () => {
     renderOffer('home');
 
     expect(await screen.findByRole('heading', {
-      name: 'Nezmeškaj nové články a tipy o králikoch',
+      name: /Buď medzi prvými, ktorí sa dozvedia o nových článkoch a tipoch/i,
     })).toBeInTheDocument();
-    expect(screen.getByText(/ZDARMA PDF príručku/i)).toBeInTheDocument();
-    expect(screen.getByRole('img', {
-      name: /náhľad PDF príručky Králik ako domáce zviera/i,
-    })).toBeInTheDocument();
+    expect(screen.getByText(/Ako bonus za prihlásenie získaš zadarmo PDF príručku/i))
+      .toBeInTheDocument();
+    const guideMockup = screen.getByRole('img', {
+      name: /náhľad PDF príručky Základy starostlivosti o králika/i,
+    });
+    expect(guideMockup).toHaveAttribute('src', '/newsletter/care-guide-mockup.png');
+    expect(guideMockup).toHaveAttribute('width', '6000');
+    expect(guideMockup).toHaveAttribute('height', '3375');
 
-    const email = screen.getByLabelText('E-mailová adresa');
+    const email = screen.getByLabelText('Zadaj svoj e-mail');
     expect(email).toHaveAttribute('type', 'email');
     expect(email).toHaveAttribute('autocomplete', 'email');
     expect(email).toBeRequired();
-    expect(screen.getByRole('button', { name: /chcem príručku zdarma/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /chcem dostávať novinky/i })).toBeEnabled();
+  });
+
+  it('shows readable consent details and returns focus to the opener when closed', async () => {
+    const user = userEvent.setup();
+    vi.mocked(loadWelcomeDiscountOffer).mockResolvedValue(null);
+    renderOffer('home');
+
+    const detailsButton = await screen.findByRole('button', {
+      name: /viac informácií/i,
+    });
+    await user.click(detailsButton);
+
+    const dialog = screen.getByRole('dialog', { name: /marketingový súhlas/i });
+    expect(dialog).toHaveAttribute('open');
+    expect(within(dialog).getByText(/Z odberu sa môžeš kedykoľvek odhlásiť/i)).toBeVisible();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Rozumiem' }));
+
+    expect(dialog).not.toHaveAttribute('open');
+    expect(detailsButton).toHaveFocus();
   });
 
   it('submits the homepage guide through the existing newsletter integration and shows success', async () => {
@@ -111,9 +135,9 @@ describe('EmailCaptureOffer', () => {
     });
 
     renderOffer('home');
-    await user.type(await screen.findByLabelText('E-mailová adresa'), 'citatel@example.com');
+    await user.type(await screen.findByLabelText('Zadaj svoj e-mail'), 'citatel@example.com');
     await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: /chcem príručku zdarma/i }));
+    await user.click(screen.getByRole('button', { name: /chcem dostávať novinky/i }));
 
     expect(signupForWelcomeDiscount).toHaveBeenCalledWith({
       email: 'citatel@example.com',
@@ -134,9 +158,9 @@ describe('EmailCaptureOffer', () => {
     }));
 
     renderOffer('home');
-    await user.type(await screen.findByLabelText('E-mailová adresa'), 'citatel@example.com');
+    await user.type(await screen.findByLabelText('Zadaj svoj e-mail'), 'citatel@example.com');
     await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: /chcem príručku zdarma/i }));
+    await user.click(screen.getByRole('button', { name: /chcem dostávať novinky/i }));
 
     expect(screen.getByRole('button', { name: 'Odosielam…' })).toBeDisabled();
     rejectSignup(new Error('network_failed'));
@@ -152,9 +176,9 @@ describe('EmailCaptureOffer', () => {
     });
 
     renderOffer('home');
-    await user.type(await screen.findByLabelText('E-mailová adresa'), 'citatel@example.com');
+    await user.type(await screen.findByLabelText('Zadaj svoj e-mail'), 'citatel@example.com');
     await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: /chcem príručku zdarma/i }));
+    await user.click(screen.getByRole('button', { name: /chcem dostávať novinky/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/limit odosielania/i);
   });
