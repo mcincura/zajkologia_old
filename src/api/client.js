@@ -161,6 +161,87 @@ export const runAdminCouponAction = async (couponId, action, payload = {}) =>
         body: JSON.stringify(payload),
     });
 
+export const loadAdminMarketingWorkspace = async () => {
+    const data = await apiFetch('/api/marketing/admin');
+    return {
+        audience: data?.audience || { total: 0, active: 0, excluded: 0, guide: 0, discount: 0 },
+        campaigns: data?.campaigns || [],
+    };
+};
+
+export const loadAdminMarketingCampaign = async (campaignId) => {
+    const data = await apiFetch(`/api/marketing/admin/${encodeURIComponent(campaignId)}`);
+    return data?.campaign || null;
+};
+
+export const createAdminMarketingCampaign = async (payload = {}) => {
+    const data = await apiFetch('/api/marketing/admin', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+    return data?.campaign || null;
+};
+
+export const updateAdminMarketingCampaign = async (campaignId, payload) => {
+    const data = await apiFetch(`/api/marketing/admin/${encodeURIComponent(campaignId)}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    });
+    return data?.campaign || null;
+};
+
+export const uploadAdminMarketingAttachment = async (campaignId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const path = `/api/marketing/admin/${encodeURIComponent(campaignId)}/attachments`;
+    const res = await fetch(apiUrl(path), {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+    });
+    const text = await res.text();
+    let data = null;
+    try {
+        data = text ? JSON.parse(text) : null;
+    } catch {
+        data = null;
+    }
+    if (!res.ok) {
+        const error = new Error(data?.error || `http_${res.status}`);
+        error.status = res.status;
+        error.data = data;
+        throw error;
+    }
+    return data?.attachment || null;
+};
+
+export const deleteAdminMarketingAttachment = async (campaignId, attachmentId) =>
+    apiFetch(`/api/marketing/admin/${encodeURIComponent(campaignId)}/attachments/${encodeURIComponent(attachmentId)}`, {
+        method: 'DELETE',
+    });
+
+export const sendAdminMarketingTest = async (campaignId, email) =>
+    apiFetch(`/api/marketing/admin/${encodeURIComponent(campaignId)}/test`, {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+    });
+
+export const queueAdminMarketingCampaign = async (campaignId, confirmation) => {
+    const data = await apiFetch(`/api/marketing/admin/${encodeURIComponent(campaignId)}/send`, {
+        method: 'POST',
+        body: JSON.stringify({ confirmation }),
+    });
+    return data?.campaign || null;
+};
+
+export const retryAdminMarketingCampaign = async (campaignId) => {
+    const data = await apiFetch(`/api/marketing/admin/${encodeURIComponent(campaignId)}/retry`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+    });
+    return data?.campaign || null;
+};
+
 export const signupForWelcomeDiscount = async ({ email, consentAccepted, source, incentive }) => {
     return apiFetch('/api/newsletter/discount-signup', {
         method: 'POST',

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Ban, Download, FileText, Package, PackageCheck, RefreshCw, Send, ShieldCheck, Tag, UsersRound } from 'lucide-react';
+import { Ban, Download, FileText, Megaphone, Package, PackageCheck, RefreshCw, Send, ShieldCheck, Tag, UsersRound } from 'lucide-react';
 import MarkdownContent from '../components/MarkdownContent';
 import { apiFetch, apiUrl, mapPostFromApi } from '../api/client';
 import ProductCmsSection from './admin/ProductCmsSection';
 import AdminCouponsSection from './admin/AdminCouponsSection';
 import MembershipAdminSection from './admin/MembershipAdminSection';
+import MarketingEmailSection from './admin/MarketingEmailSection';
 import { isShippableOrder } from '../utils/orderTypes';
 import { extractMarkdownHeadings, selectTableOfContentsHeadings } from '../utils/markdownHeadings';
 import {
@@ -164,6 +165,8 @@ const Admin = ({ section = 'orders' }) => {
     const isProductsSection = section === 'products';
     const isPostsSection = section === 'posts';
     const isMembershipSection = section === 'membership';
+    const isMarketingSection = section === 'marketing';
+    const isWideAdminSection = isMembershipSection || isCouponsSection || isMarketingSection;
     const orderStats = useMemo(() => {
         const paidOrders = orders.filter((order) => ['paid', 'fulfilled'].includes(order.status));
         const physicalToShip = orders.filter((order) =>
@@ -768,12 +771,12 @@ const Admin = ({ section = 'orders' }) => {
 
     return (
         <div
-            className={`container admin-page-layout ${isMembershipSection || isCouponsSection ? 'is-membership' : ''}`}
+            className={`container admin-page-layout ${isWideAdminSection ? 'is-membership' : ''}`}
             style={{
                 display: 'grid',
-                gridTemplateColumns: isMembershipSection || isCouponsSection ? '260px minmax(0, 1fr)' : '320px minmax(0, 1fr)',
+                gridTemplateColumns: isWideAdminSection ? '260px minmax(0, 1fr)' : '320px minmax(0, 1fr)',
                 gap: '1.5rem',
-                maxWidth: isMembershipSection || isCouponsSection ? '1800px' : undefined,
+                maxWidth: isWideAdminSection ? '1800px' : undefined,
             }}
         >
             <aside style={{
@@ -801,6 +804,10 @@ const Admin = ({ section = 'orders' }) => {
                     <NavLink to="/admin/coupons" style={adminNavLinkStyle}>
                         <Tag size={18} strokeWidth={2.4} />
                         Coupons
+                    </NavLink>
+                    <NavLink to="/admin/marketing" style={adminNavLinkStyle}>
+                        <Megaphone size={18} strokeWidth={2.4} />
+                        Marketing e-mails
                     </NavLink>
                     <NavLink to="/admin/products" style={adminNavLinkStyle}>
                         <Package size={18} strokeWidth={2.4} />
@@ -917,6 +924,17 @@ const Admin = ({ section = 'orders' }) => {
                         fontSize: '0.88rem',
                     }}>
                         Canonical coupon rules, claims, Stripe projection, and redemption history.
+                    </div>
+                ) : isMarketingSection ? (
+                    <div style={{
+                        border: '1px solid #eee',
+                        borderRadius: '10px',
+                        padding: '0.75rem',
+                        background: '#fafafa',
+                        color: '#55463d',
+                        fontSize: '0.88rem',
+                    }}>
+                        One consent-backed audience for guide and discount signups, with unsubscribe protection.
                     </div>
                 ) : (
                     <div style={{
@@ -1481,6 +1499,8 @@ const Admin = ({ section = 'orders' }) => {
                     </>
                 ) : isCouponsSection ? (
                     <AdminCouponsSection />
+                ) : isMarketingSection ? (
+                    <MarketingEmailSection />
                 ) : isProductsSection ? (
                     <ProductCmsSection />
                 ) : isMembershipSection ? (
