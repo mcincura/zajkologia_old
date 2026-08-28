@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import { CheckCircle2, Copy, Mail, Tag, X } from 'lucide-react';
+import { CheckCircle2, Copy, FileText, Mail, Tag, X } from 'lucide-react';
 import { loadWelcomeDiscountOffer, signupForWelcomeDiscount } from '../api/client';
 import { useCart } from '../cart/useCart';
 import {
@@ -7,8 +7,10 @@ import {
   WELCOME_DISCOUNT_OFFER_CHANGED_EVENT,
   getStoredWelcomeDiscountOffer,
   isEmailCaptureSuppressed,
+  isNewsletterGuideSuppressed,
   normalizeWelcomeDiscountCode,
   suppressEmailCaptureOffers,
+  suppressNewsletterGuideOffer,
   storeWelcomeDiscountOffer,
 } from '../utils/welcomeDiscount';
 import '../styles/email-capture.css';
@@ -56,6 +58,8 @@ const createPlacementCopy = (offer) => {
       'Na získanie zľavy je potrebný súhlas so zasielaním marketingových/newsletterových e-mailov.',
     emailFailed:
       'E-mail so zľavou sa nepodarilo odoslať. Skús to prosím znova o chvíľu.',
+    rateLimited:
+      'Dosiahol sa limit odosielania. Skontroluj si e-mail alebo to skús znova o hodinu.',
     alreadySubscribed:
       'Tento e-mail už máme v zozname. Uvítacia zľava je pripravená:',
     discountUsed:
@@ -67,7 +71,25 @@ const createPlacementCopy = (offer) => {
   };
 
   return {
-    home: baseCopy,
+    home: {
+      ...baseCopy,
+      eyebrow: '',
+      headline: 'Nezmeškaj nové články a tipy o králikoch',
+      subheadline:
+        'Prihlás sa na odber Zajkológia newslettera a nové články, praktické tipy aj dôležité informácie o starostlivosti o králiky ti pošleme priamo do e-mailu.',
+      benefit:
+        'Ako poďakovanie od nás získaš ZDARMA PDF príručku so základmi starostlivosti o králika.',
+      cta: 'Chcem príručku zdarma',
+      successTitle: 'Ďakujeme!',
+      emailSent: 'Skontroluj si e-mail. Príručku sme ti poslali v prílohe.',
+      missingConsent:
+        'Na odber newslettera a zaslanie príručky je potrebný súhlas so zasielaním e-mailov.',
+      emailFailed:
+        'E-mail s príručkou sa nepodarilo odoslať. Skús to prosím znova o chvíľu.',
+      discountUsed: 'Skontroluj si e-mail. Príručku sme ti poslali v prílohe.',
+      discountReserved: 'Skontroluj si e-mail. Príručku sme ti poslali v prílohe.',
+      discountIpLimit: 'Skontroluj si e-mail. Príručku sme ti poslali v prílohe.',
+    },
     product: {
       ...baseCopy,
       eyebrow: 'Uvítacia zľava',
@@ -94,6 +116,7 @@ const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim(
 const EmailCaptureOffer = ({ placement = 'home' }) => {
   const { applyCoupon } = useCart();
   const emailId = useId();
+  const headingId = useId();
   const consentId = useId();
   const consentDetailsTitleId = useId();
   const [offer, setOffer] = useState(null);
@@ -113,7 +136,9 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   const [status, setStatus] = useState('idle');
   const [copied, setCopied] = useState(false);
   const [isConsentDetailsOpen, setIsConsentDetailsOpen] = useState(false);
-  const [isSuppressed, setIsSuppressed] = useState(() => isEmailCaptureSuppressed());
+  const [isSuppressed, setIsSuppressed] = useState(() => (
+    placement === 'home' ? isNewsletterGuideSuppressed() : isEmailCaptureSuppressed()
+  ));
 
   useEffect(() => {
     let active = true;
@@ -152,7 +177,9 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
 
   useEffect(() => {
     const syncSuppression = () => {
-      setIsSuppressed(isEmailCaptureSuppressed());
+      setIsSuppressed(
+        placement === 'home' ? isNewsletterGuideSuppressed() : isEmailCaptureSuppressed()
+      );
     };
 
     syncSuppression();
@@ -160,7 +187,7 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
     return () => {
       window.removeEventListener(EMAIL_CAPTURE_VISIBILITY_CHANGED_EVENT, syncSuppression);
     };
-  }, []);
+  }, [placement]);
 
   useEffect(() => {
     if (!isConsentDetailsOpen) return undefined;
@@ -201,9 +228,22 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
         email: trimmedEmail,
         consentAccepted,
         source: placement,
+        incentive: placement === 'home' ? 'care-guide' : undefined,
       });
       if (data?.offer) setOffer(data.offer);
       const normalizedDiscountCode = normalizeWelcomeDiscountCode(data?.discountCode);
+
+      if (placement === 'home' && data?.guideDelivery === 'email') {
+        setDiscountCode('');
+        setDiscountToken('');
+        setDiscountAvailable(false);
+        setDiscountUnavailableReason('');
+        setAwaitingEmailClick(true);
+        setAlreadySubscribed(Boolean(data.alreadySubscribed));
+        setStatus('success');
+        suppressNewsletterGuideOffer();
+        return;
+      }
 
       if (data?.discountAvailable && data?.emailSent && !data?.discountToken) {
         setDiscountCode(normalizedDiscountCode);
@@ -257,6 +297,8 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
         setError(copy.invalidEmail);
       } else if (err?.data?.error === 'welcome_email_failed') {
         setError(copy.emailFailed);
+      } else if (err?.data?.error === 'newsletter_rate_limited') {
+        setError(copy.rateLimited);
       } else {
         setError('Prihlásenie sa nepodarilo. Skúste to prosím znova.');
       }
@@ -289,19 +331,32 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
     : awaitingEmailClick
       ? copy.emailSent
       : unavailableMessage;
-  const successTitle = hasDiscountCode && !alreadySubscribed ? copy.successTitle : '';
+  const successTitle = placement === 'home'
+    ? copy.successTitle
+    : hasDiscountCode && !alreadySubscribed
+      ? copy.successTitle
+      : '';
 
-  if ((isSuppressed || offerAvailability === 'unavailable') && status !== 'success') return null;
+  if (
+    (isSuppressed || (placement !== 'home' && offerAvailability === 'unavailable')) &&
+    status !== 'success'
+  ) return null;
 
   return (
     <>
-      <section className={`email-offer email-offer--${placement}`} aria-label={copy.eyebrow}>
+      <section
+        className={`email-offer email-offer--${placement}`}
+        aria-labelledby={copy.headline ? headingId : undefined}
+        aria-label={copy.headline ? undefined : copy.eyebrow}
+      >
         <div className="email-offer__copy">
-          <span className="email-offer__eyebrow">
-            <Tag size={15} aria-hidden="true" />
-            {copy.eyebrow}
-          </span>
-          {copy.headline && <h2>{copy.headline}</h2>}
+          {copy.eyebrow && (
+            <span className="email-offer__eyebrow">
+              <Tag size={15} aria-hidden="true" />
+              {copy.eyebrow}
+            </span>
+          )}
+          {copy.headline && <h2 id={headingId}>{copy.headline}</h2>}
           <p>{copy.subheadline}</p>
           {copy.benefit && (
             <p className="email-offer__benefit">
@@ -334,7 +389,12 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
             )}
           </div>
         ) : (
-          <form className="email-offer__form" onSubmit={handleSubmit} noValidate>
+          <form
+            className="email-offer__form"
+            onSubmit={handleSubmit}
+            noValidate
+            aria-busy={status === 'submitting'}
+          >
             <label className="email-offer__field" htmlFor={emailId}>
               <span>{copy.emailLabel}</span>
               <input
@@ -379,9 +439,24 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
 
             <button type="submit" className="email-offer__submit" disabled={status === 'submitting'}>
               <Mail size={17} aria-hidden="true" />
-              {status === 'submitting' ? 'Odosielam...' : copy.cta}
+              {status === 'submitting' ? 'Odosielam…' : copy.cta}
             </button>
           </form>
+        )}
+
+        {placement === 'home' && (
+          <figure className="email-offer__guide-visual">
+            <img
+              src="/product-gallery/starter-guide-main-thumbnail.webp"
+              width="1200"
+              height="1600"
+              alt="Náhľad PDF príručky Králik ako domáce zviera"
+            />
+            <figcaption>
+              <FileText size={17} aria-hidden="true" />
+              PDF príručka zdarma
+            </figcaption>
+          </figure>
         )}
       </section>
 

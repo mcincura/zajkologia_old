@@ -1,6 +1,7 @@
 export const WELCOME_DISCOUNT_STORAGE_KEY = 'zajkologia.welcomeDiscountCode';
 export const WELCOME_DISCOUNT_TOKEN_STORAGE_KEY = 'zajkologia.welcomeDiscountToken';
 export const EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY = 'zajkologia.emailCaptureSuppressed';
+export const NEWSLETTER_GUIDE_SUPPRESSED_STORAGE_KEY = 'zajkologia.newsletterGuideSuppressed';
 export const WELCOME_DISCOUNT_OFFER_CHANGED_EVENT = 'zajkologia:welcome-discount-offer-changed';
 export const EMAIL_CAPTURE_VISIBILITY_CHANGED_EVENT = 'zajkologia:email-capture-visibility-changed';
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
@@ -110,20 +111,20 @@ export const clearStoredWelcomeDiscountOffer = () => {
   notifyWelcomeDiscountOfferChanged();
 };
 
-export const isEmailCaptureSuppressed = () => {
+const isCaptureSuppressed = (storageKey) => {
   if (typeof window === 'undefined') return false;
 
   try {
-    const stored = window.localStorage.getItem(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY);
+    const stored = window.localStorage.getItem(storageKey);
     if (stored) return true;
   } catch {
     // Fall back to the cookie check below.
   }
 
-  return getCookie(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY) === 'true';
+  return getCookie(storageKey) === 'true';
 };
 
-export const suppressEmailCaptureOffers = (reason = 'subscribed') => {
+const suppressCapture = (storageKey, reason) => {
   if (typeof window === 'undefined') return;
 
   const value = JSON.stringify({
@@ -132,13 +133,27 @@ export const suppressEmailCaptureOffers = (reason = 'subscribed') => {
   });
 
   try {
-    window.localStorage.setItem(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY, value);
+    window.localStorage.setItem(storageKey, value);
   } catch {
     // Cookie still suppresses the offer if local storage is unavailable.
   }
 
-  setCookie(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY, 'true');
+  setCookie(storageKey, 'true');
   notifyEmailCaptureVisibilityChanged();
+};
+
+export const isEmailCaptureSuppressed = () =>
+  isCaptureSuppressed(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY);
+
+export const isNewsletterGuideSuppressed = () =>
+  isCaptureSuppressed(NEWSLETTER_GUIDE_SUPPRESSED_STORAGE_KEY);
+
+export const suppressEmailCaptureOffers = (reason = 'subscribed') => {
+  suppressCapture(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY, reason);
+};
+
+export const suppressNewsletterGuideOffer = () => {
+  suppressCapture(NEWSLETTER_GUIDE_SUPPRESSED_STORAGE_KEY, 'care_guide_subscribed');
 };
 
 export const clearEmailCaptureSuppression = () => {
@@ -146,10 +161,12 @@ export const clearEmailCaptureSuppression = () => {
 
   try {
     window.localStorage.removeItem(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY);
+    window.localStorage.removeItem(NEWSLETTER_GUIDE_SUPPRESSED_STORAGE_KEY);
   } catch {
     // Ignore storage failures.
   }
 
   expireCookie(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY);
+  expireCookie(NEWSLETTER_GUIDE_SUPPRESSED_STORAGE_KEY);
   notifyEmailCaptureVisibilityChanged();
 };

@@ -204,6 +204,10 @@ const Home = () => {
               </Link>
             </section>
 
+            <div className="home-newsletter-slot">
+              <EmailCaptureOffer placement="home" />
+            </div>
+
             <Link className="home-hero-about-link" to="/o-nas">
               Zistiť viac o Zajkológii
               <ArrowRight aria-hidden="true" size={16} strokeWidth={2.5} />
@@ -214,10 +218,6 @@ const Home = () => {
 
       <div className="container">
         <div className="home-intro-stack">
-          <div className="home-email-offer-slot">
-            <EmailCaptureOffer placement="home" />
-          </div>
-
           {/* Categories */}
           <div className="home-categories-slot">
             <div

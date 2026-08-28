@@ -34,7 +34,7 @@ describe('EmailCaptureOffer', () => {
       currency: 'eur',
     });
 
-    renderOffer();
+    renderOffer('product');
 
     expect((await screen.findAllByText(/30% zľav/i)).length).toBeGreaterThan(0);
     expect(screen.queryByText(/25%/)).not.toBeInTheDocument();
@@ -42,7 +42,7 @@ describe('EmailCaptureOffer', () => {
 
   it('does not solicit a claim when the canonical welcome coupon is unavailable', async () => {
     vi.mocked(loadWelcomeDiscountOffer).mockResolvedValue(null);
-    renderOffer();
+    renderOffer('product');
 
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: /uvítacia zľava/i })).not.toBeInTheDocument();
@@ -64,10 +64,10 @@ describe('EmailCaptureOffer', () => {
       emailSent: true,
     });
 
-    renderOffer();
+    renderOffer('product');
     await user.type(await screen.findByLabelText('E-mailová adresa'), 'zakaznik@example.com');
     await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: /získať 25% zľavu/i }));
+    await user.click(screen.getByRole('button', { name: /chcem zľavový kód/i }));
 
     expect(await screen.findByText('WELCOME25')).toBeInTheDocument();
     await waitFor(() => {
@@ -78,5 +78,84 @@ describe('EmailCaptureOffer', () => {
         source: 'welcome',
       });
     });
+  });
+
+  it('renders the homepage guide offer with semantic email fields even without a discount campaign', async () => {
+    vi.mocked(loadWelcomeDiscountOffer).mockResolvedValue(null);
+
+    renderOffer('home');
+
+    expect(await screen.findByRole('heading', {
+      name: 'Nezmeškaj nové články a tipy o králikoch',
+    })).toBeInTheDocument();
+    expect(screen.getByText(/ZDARMA PDF príručku/i)).toBeInTheDocument();
+    expect(screen.getByRole('img', {
+      name: /náhľad PDF príručky Králik ako domáce zviera/i,
+    })).toBeInTheDocument();
+
+    const email = screen.getByLabelText('E-mailová adresa');
+    expect(email).toHaveAttribute('type', 'email');
+    expect(email).toHaveAttribute('autocomplete', 'email');
+    expect(email).toBeRequired();
+    expect(screen.getByRole('button', { name: /chcem príručku zdarma/i })).toBeEnabled();
+  });
+
+  it('submits the homepage guide through the existing newsletter integration and shows success', async () => {
+    const user = userEvent.setup();
+    vi.mocked(loadWelcomeDiscountOffer).mockResolvedValue(null);
+    vi.mocked(signupForWelcomeDiscount).mockResolvedValue({
+      guideDelivery: 'email',
+      emailSent: true,
+      discountAvailable: false,
+      alreadySubscribed: false,
+    });
+
+    renderOffer('home');
+    await user.type(await screen.findByLabelText('E-mailová adresa'), 'citatel@example.com');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: /chcem príručku zdarma/i }));
+
+    expect(signupForWelcomeDiscount).toHaveBeenCalledWith({
+      email: 'citatel@example.com',
+      consentAccepted: true,
+      source: 'home',
+      incentive: 'care-guide',
+    });
+    expect(await screen.findByText('Ďakujeme!')).toBeInTheDocument();
+    expect(screen.getByText(/Príručku sme ti poslali v prílohe/i)).toBeInTheDocument();
+  });
+
+  it('shows loading and error states for the homepage guide form', async () => {
+    const user = userEvent.setup();
+    vi.mocked(loadWelcomeDiscountOffer).mockResolvedValue(null);
+    let rejectSignup;
+    vi.mocked(signupForWelcomeDiscount).mockImplementation(() => new Promise((_, reject) => {
+      rejectSignup = reject;
+    }));
+
+    renderOffer('home');
+    await user.type(await screen.findByLabelText('E-mailová adresa'), 'citatel@example.com');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: /chcem príručku zdarma/i }));
+
+    expect(screen.getByRole('button', { name: 'Odosielam…' })).toBeDisabled();
+    rejectSignup(new Error('network_failed'));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Prihlásenie sa nepodarilo/i);
+  });
+
+  it('explains when guide delivery is rate limited', async () => {
+    const user = userEvent.setup();
+    vi.mocked(loadWelcomeDiscountOffer).mockResolvedValue(null);
+    vi.mocked(signupForWelcomeDiscount).mockRejectedValue({
+      data: { error: 'newsletter_rate_limited' },
+      status: 429,
+    });
+
+    renderOffer('home');
+    await user.type(await screen.findByLabelText('E-mailová adresa'), 'citatel@example.com');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: /chcem príručku zdarma/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/limit odosielania/i);
   });
 });

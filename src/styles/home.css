@@ -6,6 +6,15 @@
   gap: 1rem;
 }
 
+.home-newsletter-slot {
+  width: min(100%, 1040px);
+  margin-top: 0.35rem;
+}
+
+.home-newsletter-slot .email-offer {
+  margin: 0;
+}
+
 .home-hero-about-link {
   display: inline-flex;
   min-height: 52px;
@@ -225,23 +234,13 @@
   flex-direction: column;
 }
 
-.home-email-offer-slot {
-  order: 1;
-}
-
 .home-categories-slot {
-  order: 2;
   margin-bottom: 3rem;
 }
 
 @media (min-width: 761px) {
   .home-categories-slot {
-    order: 1;
     margin-bottom: 1.5rem;
-  }
-
-  .home-email-offer-slot {
-    order: 2;
   }
 }
 

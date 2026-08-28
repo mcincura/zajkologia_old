@@ -161,10 +161,15 @@ export const runAdminCouponAction = async (couponId, action, payload = {}) =>
         body: JSON.stringify(payload),
     });
 
-export const signupForWelcomeDiscount = async ({ email, consentAccepted, source }) => {
+export const signupForWelcomeDiscount = async ({ email, consentAccepted, source, incentive }) => {
     return apiFetch('/api/newsletter/discount-signup', {
         method: 'POST',
-        body: JSON.stringify({ email, consentAccepted, source }),
+        body: JSON.stringify({
+            email,
+            consentAccepted,
+            source,
+            ...(incentive ? { incentive } : {}),
+        }),
     });
 };
 
