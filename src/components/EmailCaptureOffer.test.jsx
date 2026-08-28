@@ -159,6 +159,32 @@ describe('EmailCaptureOffer', () => {
     expect(detailsButton).toHaveFocus();
   });
 
+  it('cancels delayed dialog focus when the consent modal is closed immediately', async () => {
+    const user = userEvent.setup();
+    let delayedFocus;
+    const requestFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      delayedFocus = callback;
+      return 73;
+    });
+    const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+    vi.mocked(loadWelcomeDiscountOffer).mockResolvedValue(null);
+
+    try {
+      renderOffer('home');
+      const detailsButton = await screen.findByRole('button', { name: /viac informácií/i });
+
+      await user.click(detailsButton);
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Rozumiem' }));
+
+      expect(cancelFrame).toHaveBeenCalledWith(73);
+      delayedFocus?.(0);
+      expect(detailsButton).toHaveFocus();
+    } finally {
+      requestFrame.mockRestore();
+      cancelFrame.mockRestore();
+    }
+  });
+
   it('submits the homepage guide through the existing newsletter integration and shows success', async () => {
     const user = userEvent.setup();
     vi.mocked(loadWelcomeDiscountOffer).mockResolvedValue(null);

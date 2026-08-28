@@ -156,6 +156,7 @@ final result: passed
   - The 9.4 MB source PNG was the only browser source. Fix: retained it as the exact fallback and added 960px/1600px responsive WebP derivatives. Post-fix Chrome evidence confirmed `care-guide-mockup-1600.webp` as `currentSrc`; the final side-by-side capture shows no visible asset drift.
   - Form alerts were not programmatically linked to the invalid email or consent control. Fix: added field-targeted `aria-invalid` and `aria-describedby`, clearing them after correction. Post-fix component coverage verifies both paths.
 - Pass 2: `/private/tmp/zajkologia-design-qa/comparison-final.jpg` shows the revised implementation at the same crop, viewport, and idle state. No actionable P0/P1/P2 differences remain.
+- Pass 3 interaction hardening: a repeated full-suite run exposed a fast close race between the dialog's delayed initial-focus frame and focus restoration. The pending frame is now cancelled on close/native close and checks that the dialog is still open before focusing; a deterministic rapid-close regression test covers the sequence. This behavior-only fix does not change the final visual evidence.
 
 **Implementation checklist**
 
@@ -167,7 +168,7 @@ final result: passed
 - [x] Responsive grid order reviewed at both existing breakpoints
 - [x] Consent dialog visually and interactively verified
 - [x] Field-specific validation semantics verified
-- [x] Focused tests, lint, and production build completed
+- [x] Full 165-test suite, focused 10-test suite, lint, and production build completed
 
 **Follow-up polish**
 

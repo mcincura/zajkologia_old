@@ -130,6 +130,7 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   const consentDetailsTriggerRef = useRef(null);
   const consentDialogRef = useRef(null);
   const consentDialogCloseRef = useRef(null);
+  const consentDialogFocusFrameRef = useRef(null);
   const [offer, setOffer] = useState(null);
   const [offerAvailability, setOfferAvailability] = useState('loading');
   const placementCopy = createPlacementCopy(offer);
@@ -204,9 +205,21 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
     consentDetailsTriggerRef.current?.focus();
   };
 
+  const cancelConsentDetailsFocus = () => {
+    if (
+      consentDialogFocusFrameRef.current !== null &&
+      typeof window.cancelAnimationFrame === 'function'
+    ) {
+      window.cancelAnimationFrame(consentDialogFocusFrameRef.current);
+    }
+    consentDialogFocusFrameRef.current = null;
+  };
+
   const openConsentDetails = () => {
     const dialog = consentDialogRef.current;
     if (!dialog || dialog.open) return;
+
+    cancelConsentDetailsFocus();
 
     if (typeof dialog.showModal === 'function') {
       dialog.showModal();
@@ -214,9 +227,12 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
       dialog.setAttribute('open', '');
     }
 
-    const focusCloseButton = () => consentDialogCloseRef.current?.focus();
+    const focusCloseButton = () => {
+      consentDialogFocusFrameRef.current = null;
+      if (dialog.hasAttribute('open')) consentDialogCloseRef.current?.focus();
+    };
     if (typeof window.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(focusCloseButton);
+      consentDialogFocusFrameRef.current = window.requestAnimationFrame(focusCloseButton);
     } else {
       focusCloseButton();
     }
@@ -225,6 +241,8 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   const closeConsentDetails = () => {
     const dialog = consentDialogRef.current;
     if (!dialog) return;
+
+    cancelConsentDetailsFocus();
 
     if (dialog.open && typeof dialog.close === 'function') {
       dialog.close();
@@ -537,7 +555,10 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
         className="email-offer__modal"
         aria-labelledby={consentDetailsTitleId}
         aria-describedby={consentDetailsDescriptionId}
-        onClose={restoreConsentDetailsFocus}
+        onClose={() => {
+          cancelConsentDetailsFocus();
+          restoreConsentDetailsFocus();
+        }}
         onClick={(event) => {
           if (event.target !== event.currentTarget) return;
           const bounds = event.currentTarget.getBoundingClientRect();
