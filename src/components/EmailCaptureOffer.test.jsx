@@ -100,6 +100,7 @@ describe('EmailCaptureOffer', () => {
       'srcset',
       '/newsletter/care-guide-mockup-960.webp 960w, /newsletter/care-guide-mockup-1600.webp 1600w',
     );
+    expect(guideMockup.closest('figure')?.querySelector('figcaption')).toBeNull();
 
     const email = screen.getByLabelText('Zadaj svoj e-mail');
     expect(email).toHaveAttribute('type', 'email');

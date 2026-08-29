@@ -442,14 +442,10 @@
   width: 100%;
   margin: 0;
   padding: clamp(0.5rem, 1vw, 0.85rem);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid transparent;
   border-radius: 22px;
-  background:
-    radial-gradient(circle at 50% 48%, rgba(111, 46, 70, 0.48), transparent 58%),
-    linear-gradient(145deg, #180710, #2d0b19);
-  box-shadow:
-    0 20px 44px rgba(38, 12, 26, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -465,26 +461,6 @@
   border-radius: 14px;
   object-fit: contain;
   filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.24));
-}
-
-.email-offer__guide-visual figcaption {
-  position: absolute;
-  right: 1rem;
-  bottom: 1rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  min-height: 38px;
-  padding: 0.52rem 0.72rem;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 999px;
-  background: rgba(92, 19, 45, 0.94);
-  color: #fff8f5;
-  font-size: 0.82rem;
-  font-weight: 900;
-  line-height: 1;
-  box-shadow: 0 10px 24px rgba(38, 12, 26, 0.24);
-  backdrop-filter: blur(8px);
 }
 
 .email-offer--product {
@@ -580,10 +556,6 @@
     border-radius: 18px;
   }
 
-  .email-offer__guide-visual figcaption {
-    right: 0.72rem;
-    bottom: 0.72rem;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

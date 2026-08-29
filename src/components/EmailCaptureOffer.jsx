@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { CheckCircle2, Copy, FileText, Mail, Tag, X } from 'lucide-react';
+import { CheckCircle2, Copy, Mail, Tag, X } from 'lucide-react';
 import { loadWelcomeDiscountOffer, signupForWelcomeDiscount } from '../api/client';
 import { useCart } from '../cart/useCart';
 import {
@@ -542,10 +542,6 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
                 alt="Náhľad PDF príručky Základy starostlivosti o králika"
               />
             </picture>
-            <figcaption>
-              <FileText size={17} aria-hidden="true" />
-              PDF príručka zdarma
-            </figcaption>
           </figure>
         )}
       </section>
