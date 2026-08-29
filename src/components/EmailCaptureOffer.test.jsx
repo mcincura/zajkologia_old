@@ -5,6 +5,7 @@ import { loadWelcomeDiscountOffer, signupForWelcomeDiscount } from '../api/clien
 import { CartProvider } from '../cart/CartContext';
 import { CART_STORAGE_KEY } from '../cart/cartState';
 import { clearEmailCaptureSuppression } from '../utils/welcomeDiscount';
+import { clearNewsletterSubscriberRecognition } from '../utils/newsletterSubscriber';
 import EmailCaptureOffer from './EmailCaptureOffer';
 
 vi.mock('../api/client', () => ({
@@ -15,6 +16,7 @@ vi.mock('../api/client', () => ({
 beforeEach(() => {
   window.localStorage.clear();
   clearEmailCaptureSuppression();
+  clearNewsletterSubscriberRecognition();
   vi.clearAllMocks();
 });
 
@@ -122,6 +124,7 @@ describe('EmailCaptureOffer', () => {
     const emailError = screen.getByRole('alert');
     expect(email).toHaveAttribute('aria-invalid', 'true');
     expect(email).toHaveAttribute('aria-describedby', emailError.id);
+    expect(email).toHaveFocus();
 
     await user.type(email, 'stale');
     expect(email).toHaveAttribute('aria-invalid', 'true');
@@ -134,6 +137,7 @@ describe('EmailCaptureOffer', () => {
     const consentError = screen.getByRole('alert');
     expect(consent).toHaveAttribute('aria-invalid', 'true');
     expect(consent).toHaveAttribute('aria-describedby', consentError.id);
+    expect(consent).toHaveFocus();
 
     await user.click(consent);
     expect(consent).not.toHaveAttribute('aria-invalid');
@@ -209,6 +213,43 @@ describe('EmailCaptureOffer', () => {
     });
     expect(await screen.findByText('Ďakujeme!')).toBeInTheDocument();
     expect(screen.getByText(/Príručku sme ti poslali v prílohe/i)).toBeInTheDocument();
+  });
+
+  it('uses the guide flow for article signup and recognizes the subscriber only after success', async () => {
+    const user = userEvent.setup();
+    vi.mocked(signupForWelcomeDiscount).mockResolvedValue({
+      guideDelivery: 'email',
+      emailSent: true,
+      discountAvailable: false,
+      alreadySubscribed: false,
+    });
+
+    renderOffer('article');
+    await user.type(screen.getByLabelText('Tvoj e-mail'), 'citatel@example.com');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: /chcem články a príručku/i }));
+
+    expect(signupForWelcomeDiscount).toHaveBeenCalledWith({
+      email: 'citatel@example.com',
+      consentAccepted: true,
+      source: 'article',
+      incentive: 'care-guide',
+    });
+    expect(window.localStorage.getItem('zajkologia.newsletterSubscriber:v1')).toBe('true');
+    expect(await screen.findByText('Ďakujeme!')).toBeInTheDocument();
+  });
+
+  it('does not recognize an article visitor when newsletter signup fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(signupForWelcomeDiscount).mockRejectedValue(new Error('network_failed'));
+
+    renderOffer('article');
+    await user.type(screen.getByLabelText('Tvoj e-mail'), 'citatel@example.com');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: /chcem články a príručku/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Prihlásenie sa nepodarilo/i);
+    expect(window.localStorage.getItem('zajkologia.newsletterSubscriber:v1')).toBeNull();
   });
 
   it('shows loading and error states for the homepage guide form', async () => {

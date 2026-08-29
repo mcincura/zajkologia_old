@@ -713,3 +713,8 @@ export const mapPostFromApi = (p) => ({
     hasFaq: Boolean(p.hasFaq),
     faqItems: parseFaqContent(p.faqContent),
 });
+
+export const loadPostSummaries = async () => {
+    const data = await apiFetch('/api/posts?view=summary');
+    return (data?.posts || []).map(mapPostFromApi);
+};

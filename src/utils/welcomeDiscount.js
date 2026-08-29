@@ -124,6 +124,19 @@ const isCaptureSuppressed = (storageKey) => {
   return getCookie(storageKey) === 'true';
 };
 
+const getCaptureSuppressionReason = (storageKey) => {
+  if (typeof window === 'undefined') return '';
+
+  try {
+    const stored = window.localStorage.getItem(storageKey);
+    if (!stored) return '';
+    const parsed = JSON.parse(stored);
+    return typeof parsed?.reason === 'string' ? parsed.reason : '';
+  } catch {
+    return '';
+  }
+};
+
 const suppressCapture = (storageKey, reason) => {
   if (typeof window === 'undefined') return;
 
@@ -147,6 +160,9 @@ export const isEmailCaptureSuppressed = () =>
 
 export const isNewsletterGuideSuppressed = () =>
   isCaptureSuppressed(NEWSLETTER_GUIDE_SUPPRESSED_STORAGE_KEY);
+
+export const getEmailCaptureSuppressionReason = () =>
+  getCaptureSuppressionReason(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY);
 
 export const suppressEmailCaptureOffers = (reason = 'subscribed') => {
   suppressCapture(EMAIL_CAPTURE_SUPPRESSED_STORAGE_KEY, reason);

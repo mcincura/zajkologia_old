@@ -13,6 +13,7 @@ import {
   suppressNewsletterGuideOffer,
   storeWelcomeDiscountOffer,
 } from '../utils/welcomeDiscount';
+import { markNewsletterSubscriberRecognized } from '../utils/newsletterSubscriber';
 import '../styles/email-capture.css';
 
 export const MARKETING_CONSENT_TEXT =
@@ -107,20 +108,32 @@ const createPlacementCopy = (offer) => {
     },
     article: {
       ...baseCopy,
-      eyebrow: 'Pokračuj so Zajkológiou',
-      headline: 'Páčia sa ti praktické rady ku králikom?',
+      eyebrow: 'Novinky zo Zajkológie',
+      headline: 'Nezmeškaj ďalšie články o králikoch',
       subheadline:
-        `Pridaj sa do e-mailového zoznamu a dostaneš ďalšie užitočné tipy, novinky a občasné ponuky. Ako poďakovanie ti pošleme ${discountAccusative} na prvý nákup.`,
-      benefit: 'Pokojnejšia starostlivosť začína pri dobrých informáciách.',
-      cta: 'Pridať sa a získať zľavu',
+        'Prihlás sa na odber noviniek od Zajkológie a získaj nové články, praktické tipy a užitočné informácie medzi prvými.',
+      benefit:
+        'Ako bonus za prihlásenie získaš zadarmo PDF príručku so základmi starostlivosti o králika.',
+      emailLabel: 'Tvoj e-mail',
+      consentLabel:
+        'Súhlasím so zasielaním newslettera, nových článkov a ďalších e-mailov od Zajkológie.',
+      consentDetailsLabel: 'Viac informácií',
+      cta: 'Chcem články a príručku',
+      successTitle: 'Ďakujeme!',
+      emailSent: 'Skontroluj si e-mail. Príručku sme ti poslali v prílohe.',
+      missingConsent:
+        'Na odber newslettera a zaslanie príručky je potrebný súhlas so zasielaním e-mailov.',
+      emailFailed:
+        'E-mail s príručkou sa nepodarilo odoslať. Skús to prosím znova o chvíľu.',
     },
   };
 };
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 
-const EmailCaptureOffer = ({ placement = 'home' }) => {
+const EmailCaptureOffer = ({ placement = 'home', onSubscribed }) => {
   const { applyCoupon } = useCart();
+  const usesGuideIncentive = placement === 'home' || placement === 'article';
   const emailId = useId();
   const headingId = useId();
   const consentId = useId();
@@ -131,6 +144,8 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   const consentDialogRef = useRef(null);
   const consentDialogCloseRef = useRef(null);
   const consentDialogFocusFrameRef = useRef(null);
+  const emailInputRef = useRef(null);
+  const consentInputRef = useRef(null);
   const [offer, setOffer] = useState(null);
   const [offerAvailability, setOfferAvailability] = useState('loading');
   const placementCopy = createPlacementCopy(offer);
@@ -149,10 +164,19 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   const [status, setStatus] = useState('idle');
   const [copied, setCopied] = useState(false);
   const [isSuppressed, setIsSuppressed] = useState(() => (
-    placement === 'home' ? isNewsletterGuideSuppressed() : isEmailCaptureSuppressed()
+    placement === 'home'
+      ? isNewsletterGuideSuppressed()
+      : placement === 'article'
+        ? false
+        : isEmailCaptureSuppressed()
   ));
 
   useEffect(() => {
+    if (placement !== 'product') {
+      setOfferAvailability('not-required');
+      return undefined;
+    }
+
     let active = true;
     loadWelcomeDiscountOffer()
       .then((nextOffer) => {
@@ -166,7 +190,7 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [placement]);
 
   useEffect(() => {
     const syncStoredOffer = () => {
@@ -190,7 +214,11 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
   useEffect(() => {
     const syncSuppression = () => {
       setIsSuppressed(
-        placement === 'home' ? isNewsletterGuideSuppressed() : isEmailCaptureSuppressed()
+        placement === 'home'
+          ? isNewsletterGuideSuppressed()
+          : placement === 'article'
+            ? false
+            : isEmailCaptureSuppressed()
       );
     };
 
@@ -260,12 +288,14 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
     if (!isValidEmail(trimmedEmail)) {
       setError(copy.invalidEmail);
       setErrorTarget('email');
+      emailInputRef.current?.focus();
       return;
     }
 
     if (!consentAccepted) {
       setError(copy.missingConsent);
       setErrorTarget('consent');
+      consentInputRef.current?.focus();
       return;
     }
 
@@ -280,12 +310,14 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
         email: trimmedEmail,
         consentAccepted,
         source: placement,
-        incentive: placement === 'home' ? 'care-guide' : undefined,
+        incentive: usesGuideIncentive ? 'care-guide' : undefined,
       });
+      markNewsletterSubscriberRecognized();
+      onSubscribed?.(data);
       if (data?.offer) setOffer(data.offer);
       const normalizedDiscountCode = normalizeWelcomeDiscountCode(data?.discountCode);
 
-      if (placement === 'home' && data?.guideDelivery === 'email') {
+      if (usesGuideIncentive && data?.guideDelivery === 'email') {
         setDiscountCode('');
         setDiscountToken('');
         setDiscountAvailable(false);
@@ -293,7 +325,8 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
         setAwaitingEmailClick(true);
         setAlreadySubscribed(Boolean(data.alreadySubscribed));
         setStatus('success');
-        suppressNewsletterGuideOffer();
+        if (placement === 'home') suppressNewsletterGuideOffer();
+        else suppressEmailCaptureOffers('subscribed');
         return;
       }
 
@@ -388,14 +421,14 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
     : awaitingEmailClick
       ? copy.emailSent
       : unavailableMessage;
-  const successTitle = placement === 'home'
+  const successTitle = usesGuideIncentive
     ? copy.successTitle
     : hasDiscountCode && !alreadySubscribed
       ? copy.successTitle
       : '';
 
   if (
-    (isSuppressed || (placement !== 'home' && offerAvailability === 'unavailable')) &&
+    (isSuppressed || (placement === 'product' && offerAvailability === 'unavailable')) &&
     status !== 'success'
   ) return null;
 
@@ -461,6 +494,7 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
             <label className="email-offer__field" htmlFor={emailId}>
               <span>{copy.emailLabel}</span>
               <input
+                ref={emailInputRef}
                 id={emailId}
                 type="email"
                 value={email}
@@ -482,6 +516,7 @@ const EmailCaptureOffer = ({ placement = 'home' }) => {
 
             <div className="email-offer__consent">
               <input
+                ref={consentInputRef}
                 id={consentId}
                 type="checkbox"
                 checked={consentAccepted}

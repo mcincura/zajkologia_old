@@ -93,7 +93,7 @@
   background: #ffffff;
   color: var(--email-offer-ink);
   font: inherit;
-  font-size: 0.98rem;
+  font-size: 1rem;
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
