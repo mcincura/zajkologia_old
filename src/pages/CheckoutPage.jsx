@@ -662,8 +662,9 @@ const CheckoutPaymentForm = ({
         return;
       }
       setStatus(hasPayment ? 'Odosielame platbu…' : 'Dokončujeme objednávku bez platby…');
+      // The server already sets the trusted return_url on the Checkout Session.
+      // Passing returnUrl again here makes Stripe reject the confirmation.
       const confirmation = await checkoutState.checkout.confirm({
-        returnUrl: bootstrap.stripe.returnUrl,
         redirect: 'if_required',
         email: customer.email,
         billingAddress: { name: customer.billing.name, address: customer.billing.address },

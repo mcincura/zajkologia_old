@@ -454,7 +454,7 @@ describe('first-party Checkout Elements page', () => {
     expect(stripeActions.confirm).not.toHaveBeenCalled();
   });
 
-  it('passes the server-trusted return URL and canonical details to Stripe confirm', async () => {
+  it('uses the Session return URL and passes canonical details to Stripe confirm', async () => {
     vi.mocked(loadCheckoutAttempt).mockResolvedValue(readyBootstrap);
     renderCheckout();
     await userEvent.click(await screen.findByTestId('payment-element'));
@@ -462,12 +462,12 @@ describe('first-party Checkout Elements page', () => {
 
     await waitFor(() => expect(stripeActions.confirm).toHaveBeenCalledOnce());
     expect(stripeActions.confirm).toHaveBeenCalledWith(expect.objectContaining({
-      returnUrl: readyBootstrap.stripe.returnUrl,
       redirect: 'if_required',
       email: 'buyer@example.com',
       billingAddress: expect.objectContaining({ name: 'Buyer Rabbit' }),
     }));
     const confirmInput = stripeActions.confirm.mock.calls[0][0];
+    expect(confirmInput).not.toHaveProperty('returnUrl');
     expect(confirmInput.billingAddress).not.toHaveProperty('phone');
     expect(saveCheckoutCustomer).not.toHaveBeenCalled();
   });
