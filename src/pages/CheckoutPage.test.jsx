@@ -29,8 +29,8 @@ vi.mock('@stripe/react-stripe-js/checkout', () => ({
     <div data-testid="checkout-provider" data-client-secret={options?.clientSecret}>{children}</div>
   ),
   useCheckoutElements: () => ({ ...stripeHook, checkout: stripeActions }),
-  PaymentElement: ({ onChange, onReady }) => (
-    <button type="button" data-testid="payment-element" onClick={() => {
+  PaymentElement: ({ onChange, onReady, options }) => (
+    <button type="button" data-testid="payment-element" data-options={JSON.stringify(options)} onClick={() => {
       onReady?.({ focus: vi.fn() });
       onChange?.({ complete: true });
     }}>Complete payment</button>
@@ -457,7 +457,18 @@ describe('first-party Checkout Elements page', () => {
   it('uses the Session return URL and passes canonical details to Stripe confirm', async () => {
     vi.mocked(loadCheckoutAttempt).mockResolvedValue(readyBootstrap);
     renderCheckout();
-    await userEvent.click(await screen.findByTestId('payment-element'));
+    const paymentElement = await screen.findByTestId('payment-element');
+    expect(JSON.parse(paymentElement.dataset.options)).toEqual(expect.objectContaining({
+      fields: {
+        billingDetails: {
+          name: 'never',
+          email: 'never',
+          phone: 'never',
+          address: 'never',
+        },
+      },
+    }));
+    await userEvent.click(paymentElement);
     await userEvent.click(screen.getByRole('button', { name: /zaplatiť 3,99/i }));
 
     await waitFor(() => expect(stripeActions.confirm).toHaveBeenCalledOnce());

@@ -42,6 +42,20 @@ import '../styles/checkout.css';
 const stripePromiseCache = new Map();
 const PROCESSING_POLL_MS = 1_500;
 const PROCESSING_MAX_POLLS = 20;
+const PAYMENT_ELEMENT_OPTIONS = {
+  layout: 'accordion',
+  wallets: { applePay: 'auto', googlePay: 'auto' },
+  // These details are collected and locked in the first-party form, then
+  // supplied to checkout.confirm(). Stripe must not collect them a second time.
+  fields: {
+    billingDetails: {
+      name: 'never',
+      email: 'never',
+      phone: 'never',
+      address: 'never',
+    },
+  },
+};
 
 const getStripePromise = (publishableKey) => {
   if (!stripePromiseCache.has(publishableKey)) {
@@ -723,7 +737,7 @@ const CheckoutPaymentForm = ({
         </section>
         <section className="onsite-checkout__section" aria-labelledby="checkout-payment-title">
           <div className="onsite-checkout__section-title"><span>2</span><div><h2 id="checkout-payment-title">Platba</h2><p>{hasPayment ? 'Vyberte si dostupnú platobnú metódu.' : 'Zľava pokryla celú sumu; platobná karta nie je potrebná.'}</p></div></div>
-          {hasPayment ? <PaymentElement options={{ layout: 'accordion', wallets: { applePay: 'auto', googlePay: 'auto' } }} onReady={(element) => { paymentElementRef.current = element; }} onChange={(event) => setPaymentComplete(event.complete)} /> : <div className="onsite-checkout__free"><CheckCircle2 aria-hidden="true" /> Objednávka nevyžaduje platbu.</div>}
+          {hasPayment ? <PaymentElement options={PAYMENT_ELEMENT_OPTIONS} onReady={(element) => { paymentElementRef.current = element; }} onChange={(event) => setPaymentComplete(event.complete)} /> : <div className="onsite-checkout__free"><CheckCircle2 aria-hidden="true" /> Objednávka nevyžaduje platbu.</div>}
         </section>
         <button className="onsite-checkout__submit" type="submit" disabled={busy || couponBusy || checkoutState.type !== 'success'} aria-busy={busy || couponBusy}><LockKeyhole size={18} aria-hidden="true" />{busy ? 'Spracúvame…' : hasPayment ? `Zaplatiť ${formatMoney(display.total, display.currency)}` : 'Dokončiť objednávku'}</button>
         <p className="onsite-checkout__submit-note">Platobné údaje idú priamo do Stripe. Ak banka vyžaduje overenie, bezpečne vás vrátime na túto pokladňu.</p>
